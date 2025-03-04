@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: cloudsync-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cloudsync
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: cloudsync
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cloudsync-network
+    command: postgres -c max_connections=200 -c shared_buffers=256MB
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Redis for Caching
+  redis:
+    image: redis:7-alpine
+    container_name: cloudsync-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cloudsync-network
+    command: redis-server --save 60 1 --loglevel warning --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # RabbitMQ for Event Processing
+  rabbitmq:
+    image: rabbitmq:3.10-management-alpine
+    container_name: cloudsync-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"  # AMQP protocol
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - cloudsync-network
+    environment:
+      - RABBITMQ_DEFAULT_USER=cloudsync
+      - RABBITMQ_DEFAULT_PASS=rabbitmq_password
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # API Service (will be configured later)
+  # api:
+  #   build:
+  #     context: ./api
+  #     dockerfile: Dockerfile
+  #   container_name: cloudsync-api
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - DATABASE_URL=postgresql://cloudsync:postgres_password@postgres:5432/cloudsync
+  #     - REDIS_URL=redis://redis:6379
+  #     - RABBITMQ_URL=amqp://cloudsync:rabbitmq_password@rabbitmq:5672
+  #   networks:
+  #     - cloudsync-network
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - rabbitmq
+
+  # Dashboard (will be configured later)
+  # dashboard:
+  #   build:
+  #     context: ./dashboard
+  #     dockerfile: Dockerfile
+  #   container_name: cloudsync-dashboard
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3001:3001"
+  #   environment:
+  #     - REACT_APP_API_URL=http://localhost:3000
+  #   networks:
+  #     - cloudsync-network
+  #   depends_on:
+  #     - api
+
+networks:
+  cloudsync-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
