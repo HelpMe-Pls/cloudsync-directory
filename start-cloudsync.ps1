@@ -9,7 +9,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Ensure we're in the correct directory
-Set-Location -Path "C:\Users\ASUS\CascadeProjects\cloudsync-directory"
+Set-Location -Path "D:\Junior\MVP\cloudsync-directory"
 
 # Function to check if a port is in use
 function Test-PortInUse {
@@ -55,11 +55,11 @@ if (-not (Test-Path -Path "dashboard/node_modules")) {
 
 # Start the API service in the background
 Write-Host "Starting API service..." -ForegroundColor Green
-Start-Process -FilePath "powershell" -ArgumentList "-Command", "Set-Location -Path C:\Users\ASUS\CascadeProjects\cloudsync-directory\api; npm run start:dev"
+Start-Process -FilePath "powershell" -ArgumentList "-Command", "Set-Location -Path D:\Junior\MVP\cloudsync-directory\api; npm run start:dev"
 
 # Start the Dashboard in the background
 Write-Host "Starting Dashboard..." -ForegroundColor Green
-Start-Process -FilePath "powershell" -ArgumentList "-Command", "Set-Location -Path C:\Users\ASUS\CascadeProjects\cloudsync-directory\dashboard; npm start"
+Start-Process -FilePath "powershell" -ArgumentList "-Command", "Set-Location -Path D:\Junior\MVP\cloudsync-directory\dashboard; npm start"
 
 # All services are now running
 Write-Host "CloudSync Directory Service is now running!" -ForegroundColor Green

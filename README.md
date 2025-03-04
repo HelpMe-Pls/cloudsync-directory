@@ -5,6 +5,7 @@
 CloudSync is a high-performance, cloud-native directory service that manages users, groups, and their relationships within an enterprise environment. It provides robust APIs for directory operations, along with an admin dashboard for monitoring and management.
 
 **Key Features:**
+
 - User and group management with role-based access control
 - High-performance data storage with intelligent caching
 - Event-driven architecture for reliable processing
@@ -13,12 +14,24 @@ CloudSync is a high-performance, cloud-native directory service that manages use
 
 ## System Architecture
 
-CloudSync follows a microservices-lite architecture with the following components:
+CloudSync follows a microservices-lite architecture (also known as a Modular Monolith) with the following components:
 
 1. **Core API Service** - NestJS application that exposes RESTful and GraphQL endpoints
 2. **Admin Dashboard** - React application for management and monitoring
 3. **Data Layer** - PostgreSQL database with Prisma ORM and Redis caching
 4. **Event System** - RabbitMQ for reliable event processing
+
+### Microservices-Lite: The Perfect Balance
+
+Our architecture represents a balance between a traditional monolith and a full microservices approach:
+
+- **Modular Monorepo Structure**: All components are in one repository, simplifying development and deployment
+- **Logical Separation**: Clear module boundaries with independent concerns
+- **Shared Infrastructure**: Services share database and infrastructure for resource efficiency
+- **Event-Driven Communication**: Services communicate via events where appropriate
+- **Single Deployment Process**: Streamlined deployment with one-command startup
+
+This approach offers enterprise-level architecture patterns while remaining achievable for an MVP and simpler to maintain than true microservices.
 
 ![System Architecture Diagram](docs/architecture.png) <!-- Will be added later -->
 
@@ -82,6 +95,7 @@ CloudSync is engineered for performance and scalability:
 ## Demo Mode
 
 CloudSync includes a demo mode that automatically:
+
 1. Seeds the database with sample users and groups
 2. Simulates traffic to demonstrate performance
 3. Generates performance metrics
@@ -93,7 +107,7 @@ npm run demo
 
 ## Architecture Decision Records
 
-For a detailed explanation of the architectural decisions made in this project, see the [Architecture Decision Records](docs/adr) folder.
+For a detailed explanation of the architectural decisions made in this project, see the [Architecture Decision Records](./docs/adr) folder.
 
 ## License
 

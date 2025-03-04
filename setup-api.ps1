@@ -1,7 +1,7 @@
 # Setup Script for CloudSync API
 
 # Ensure we're in the correct directory
-Set-Location -Path "C:\Users\ASUS\CascadeProjects\cloudsync-directory"
+Set-Location -Path "D:\Junior\MVP\cloudsync-directory"
 
 # Install NestJS CLI if not already installed
 Write-Host "Installing NestJS CLI..." -ForegroundColor Green
