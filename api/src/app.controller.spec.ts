@@ -19,4 +19,15 @@ describe('AppController', () => {
       expect(appController.getHello()).toBe('Hello World!');
     });
   });
+
+  describe('health', () => {
+    it('should return health status with API and database marked as available', () => {
+      const healthResult = appController.getHealth();
+
+      expect(healthResult.status).toBe('ok');
+      expect(typeof healthResult.timestamp).toBe('string');
+      expect(healthResult.services.api).toBe(true);
+      expect(healthResult.services.database).toBe(true);
+    });
+  });
 });
