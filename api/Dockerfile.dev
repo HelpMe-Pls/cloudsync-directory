@@ -1,0 +1,22 @@
+FROM oven/bun:latest
+
+WORKDIR /app
+
+COPY package.json bun.lock ./
+
+RUN bun install
+
+COPY . .
+
+# Generate Prisma client
+RUN bunx prisma generate
+
+# Install netcat for the startup script
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
+# Make startup script executable
+RUN chmod +x start-dev.sh
+
+EXPOSE 3000
+
+CMD ["./start-dev.sh"]

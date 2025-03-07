@@ -12,3 +12,97 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// User model represents directory users
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String    @unique
+  displayName   String
+  passwordHash  String
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+  
+  // Relations
+  memberships   GroupMembership[]
+  roles         UserRole[]
+}
+
+// Group model represents directory groups
+model Group {
+  id            String    @id @default(uuid())
+  name          String    @unique
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  memberships   GroupMembership[]
+  parentGroup   Group?    @relation("GroupHierarchy", fields: [parentGroupId], references: [id])
+  parentGroupId String?
+  childGroups   Group[]   @relation("GroupHierarchy")
+}
+
+// GroupMembership represents the many-to-many relationship between users and groups
+model GroupMembership {
+  id        String   @id @default(uuid())
+  userId    String
+  groupId   String
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, groupId])
+}
+
+// Role model for RBAC
+model Role {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  
+  // Relations
+  userRoles   UserRole[]
+  permissions RolePermission[]
+}
+
+// UserRole represents the many-to-many relationship between users and roles
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roleId])
+}
+
+// Permission model for fine-grained access control
+model Permission {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  
+  // Relations
+  rolePermissions RolePermission[]
+}
+
+// RolePermission represents the many-to-many relationship between roles and permissions
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  permissionId String
+  
+  // Relations
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, permissionId])
+}

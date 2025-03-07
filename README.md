@@ -47,18 +47,19 @@ CloudSync is engineered for performance and scalability:
 ## Technology Stack
 
 - **Backend**: NestJS, TypeScript, Prisma ORM
-- **Frontend**: React, TailwindCSS
+- **Frontend**: React, React Router, Axios
 - **Databases**: PostgreSQL, Redis
 - **Message Queue**: RabbitMQ
 - **Infrastructure**: Docker, Docker Compose
+- **Package Manager**: Bun
 
 ## Getting Started
 
 ### Prerequisites
 
 - Docker and Docker Compose
-- Node.js (v16+)
-- npm or yarn
+- Node.js (v18+)
+- Bun (latest version)
 
 ### Setup
 
@@ -68,29 +69,144 @@ CloudSync is engineered for performance and scalability:
    cd cloudsync-directory
    ```
 
-2. Start the infrastructure services:
+2. Install dependencies:
    ```
-   docker-compose up -d
-   ```
-
-3. Set up the API service:
-   ```
-   cd api
-   npm install
-   npm run start:dev
+   bun run setup
    ```
 
-4. Set up the Dashboard:
+3. Start all services in development mode (with hot reload):
    ```
-   cd ../dashboard
-   npm install
-   npm run start
+   bun run start:dev
    ```
 
-5. Access the services:
+4. Or start all services in production mode:
+   ```
+   bun run start:prod
+   ```
+
+5. To stop all services:
+   ```
+   bun run stop
+   ```
+
+6. Access the services:
    - API: http://localhost:3000
    - Dashboard: http://localhost:3001
    - RabbitMQ Management: http://localhost:15672 (Username: cloudsync, Password: rabbitmq_password)
+   - Prisma Studio: http://localhost:5555 (after running `bun run db:studio`)
+
+### Database Management
+
+CloudSync provides several commands for managing the database:
+
+1. Run database migrations:
+   ```
+   bun run db:migrate
+   ```
+
+2. Seed the database with initial data:
+   ```
+   bun run db:seed
+   ```
+
+3. Reset the database (WARNING: This will delete all data):
+   ```
+   bun run db:reset
+   ```
+
+4. Open Prisma Studio to view and edit database data:
+   ```
+   bun run db:studio
+   ```
+
+### Development Workflow
+
+The project uses Docker Compose for local development with hot reload:
+
+1. All services can be started with a single command:
+   ```
+   bun run start:dev
+   ```
+
+2. View logs for all services:
+   ```
+   bun run logs
+   ```
+
+3. View logs for a specific service:
+   ```
+   bun run logs:api
+   # or
+   bun run logs:dashboard
+   ```
+
+4. Check the status of all services:
+   ```
+   bun run status
+   ```
+
+### Production Deployment
+
+For production deployment, use the production Docker Compose configuration:
+
+```
+bun run start:prod
+```
+
+This will build optimized containers and run them in production mode with appropriate scaling.
+
+### Docker Operations
+
+CloudSync provides commands for building and pushing Docker images:
+
+1. Build Docker images for production:
+   ```
+   bun run docker:build
+   ```
+
+2. Push Docker images to a registry:
+   ```
+   bun run docker:push
+   ```
+
+## API Documentation
+
+The API documentation is available at http://localhost:3000/api when the API service is running. It provides detailed information about all available endpoints, request/response schemas, and authentication requirements.
+
+## Dashboard Features
+
+The CloudSync Dashboard provides a user-friendly interface for managing the directory service:
+
+1. **User Management**:
+   - View all users in the directory
+   - Create, update, and delete users
+   - Assign users to groups
+   - Manage user roles and permissions
+
+2. **Group Management**:
+   - View all groups in the directory
+   - Create, update, and delete groups
+   - Add and remove users from groups
+   - Manage group hierarchies
+
+3. **Dashboard Overview**:
+   - View key metrics and statistics
+   - Monitor system performance
+   - Track user and group activities
+
+## Horizontal Scaling
+
+CloudSync is designed for horizontal scaling:
+
+1. The API service can be scaled by setting the `API_REPLICAS` environment variable
+2. The Dashboard service can be scaled by setting the `DASHBOARD_REPLICAS` environment variable
+3. The database and message queue are configured for high availability
+
+Example scaling configuration in `.env`:
+```
+API_REPLICAS=3
+DASHBOARD_REPLICAS=2
+```
 
 ## Demo Mode
 
@@ -102,8 +218,27 @@ CloudSync includes a demo mode that automatically:
 
 To run in demo mode:
 ```
-npm run demo
+bun run demo
 ```
+
+## Testing
+
+CloudSync includes comprehensive testing for both the API and dashboard services:
+
+1. Run all tests:
+   ```
+   bun run test
+   ```
+
+2. Run API tests only:
+   ```
+   cd api && bun test
+   ```
+
+3. Run dashboard tests only:
+   ```
+   cd dashboard && bun test
+   ```
 
 ## Architecture Decision Records
 

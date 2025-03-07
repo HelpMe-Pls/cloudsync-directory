@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:14
+    container_name: cloudsync-postgres
+    environment:
+      POSTGRES_USER: cloudsync
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
+      POSTGRES_DB: cloudsync
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cloudsync"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: cloudsync-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: cloudsync-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: cloudsync
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbitmq_password}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    image: cloudsync-api:latest
+    build:
+      context: ./api
+      dockerfile: Dockerfile.prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://cloudsync:${POSTGRES_PASSWORD:-postgres_password}@postgres:5432/cloudsync
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://cloudsync:${RABBITMQ_PASSWORD:-rabbitmq_password}@rabbitmq:5672
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-prod_jwt_secret_key}
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: ${API_REPLICAS:-2}
+
+  dashboard:
+    image: cloudsync-dashboard:latest
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile.prod
+    depends_on:
+      - api
+    environment:
+      API_URL: http://api:3000
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: ${DASHBOARD_REPLICAS:-2}
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

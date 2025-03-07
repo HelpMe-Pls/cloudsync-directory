@@ -34,7 +34,7 @@ Implement a microservices-lite architecture with four key components:
 
 ## Rationale
 
-- **Microservices-lite**: Provides a balance between demonstrating enterprise architecture without the complexity of a full microservices deployment
+- **Microservices-lite (modular monolith)**: Provides a balance between demonstrating enterprise architecture without the complexity of a full microservices deployment
 - **NestJS**: Offers built-in modularity and enterprise patterns that align with Microsoft's tech stack
 - **PostgreSQL + Prisma**: Simplifies database operations while providing enterprise-grade persistence
 - **Redis**: Enables caching demonstrations with minimal configuration
@@ -44,12 +44,14 @@ Implement a microservices-lite architecture with four key components:
 ## Consequences
 
 ### Positive
+
 - Achievable scope within the time constraints
 - Demonstrates multiple enterprise concepts relevant to the job description
 - Showcases performance optimization techniques
 - Creates quantifiable metrics for resume
 
 ### Negative
+
 - Less distributed than a true enterprise system
 - Some cloud features will be simulated rather than implemented
 - Limited scale compared to actual enterprise directories

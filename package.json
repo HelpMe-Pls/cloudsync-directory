@@ -1,0 +1,31 @@
+{
+  "name": "cloudsync-directory",
+  "version": "1.0.0",
+  "description": "CloudSync Directory Service - A high-performance, cloud-native directory service",
+  "private": true,
+  "scripts": {
+    "start:dev": "powershell -ExecutionPolicy Bypass -File .\\cloudsync.ps1 start:dev",
+    "start:prod": "powershell -ExecutionPolicy Bypass -File .\\cloudsync.ps1 start:prod",
+    "stop": "powershell -ExecutionPolicy Bypass -File .\\cloudsync.ps1 stop",
+    "status": "powershell -ExecutionPolicy Bypass -File .\\cloudsync.ps1 status",
+    "logs": "powershell -ExecutionPolicy Bypass -File .\\cloudsync.ps1 logs",
+    "logs:api": "powershell -ExecutionPolicy Bypass -File .\\cloudsync.ps1 logs api",
+    "logs:dashboard": "powershell -ExecutionPolicy Bypass -File .\\cloudsync.ps1 logs dashboard",
+    "setup": "bun install && cd api && bun install && cd ../dashboard && bun install",
+    "build": "cd api && bun run build && cd ../dashboard && bun run build",
+    "demo": "cd api && bun run start:dev",
+    "db:migrate": "cd api && bunx prisma migrate dev",
+    "db:seed": "cd api && bunx prisma db seed",
+    "db:studio": "cd api && bunx prisma studio",
+    "db:reset": "cd api && bunx prisma migrate reset --force",
+    "test": "cd api && bun test && cd ../dashboard && bun test",
+    "lint": "cd api && bun run lint && cd ../dashboard && bun run lint",
+    "docker:build": "docker-compose -f docker-compose.prod.yml build",
+    "docker:push": "docker-compose -f docker-compose.prod.yml push"
+  },
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

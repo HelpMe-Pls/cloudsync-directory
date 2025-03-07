@@ -1,0 +1,40 @@
+FROM oven/bun:latest AS builder
+
+WORKDIR /app
+
+COPY package.json bun.lock ./
+
+RUN bun install
+
+COPY . .
+
+# Generate Prisma client
+RUN bunx prisma generate
+
+# Build the application
+RUN bun run build
+
+# Production stage
+FROM oven/bun:latest
+
+WORKDIR /app
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+
+# Copy Prisma schema and migrations for potential runtime operations
+COPY --from=builder /app/prisma ./prisma
+
+# Copy startup script
+COPY --from=builder /app/start-prod.sh ./start-prod.sh
+
+# Install netcat for the startup script
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
+# Make startup script executable
+RUN chmod +x start-prod.sh
+
+EXPOSE 3000
+
+CMD ["./start-prod.sh"]
