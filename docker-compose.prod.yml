@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
       POSTGRES_DB: cloudsync
     ports:
-      - "5432:5432"
+      - "8432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
     container_name: cloudsync-redis
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - "8379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -39,8 +39,8 @@ services:
       RABBITMQ_DEFAULT_USER: cloudsync
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbitmq_password}
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "8672:5672"
+      - "18672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -69,11 +69,8 @@ services:
       NODE_ENV: production
       JWT_SECRET: ${JWT_SECRET:-prod_jwt_secret_key}
     ports:
-      - "3000:3000"
+      - "8000:3000"
     restart: unless-stopped
-    deploy:
-      mode: replicated
-      replicas: ${API_REPLICAS:-2}
 
   dashboard:
     image: cloudsync-dashboard:latest
@@ -86,11 +83,8 @@ services:
       API_URL: http://api:3000
       NODE_ENV: production
     ports:
-      - "3001:3001"
+      - "8001:3001"
     restart: unless-stopped
-    deploy:
-      mode: replicated
-      replicas: ${DASHBOARD_REPLICAS:-2}
 
 volumes:
   postgres_data:

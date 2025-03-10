@@ -19,6 +19,7 @@ function show_help {
   echo "  verify:db     - Verify PostgreSQL database"
   echo "  verify:redis  - Verify Redis service"
   echo "  verify:rabbitmq - Verify RabbitMQ service"
+  echo "  verify:dashboard - Verify Dashboard service"
   echo "  db:migrate    - Run database migrations"
   echo "  db:seed       - Seed the database with initial data"
   echo "  db:reset      - Reset the database (WARNING: This will delete all data)"
@@ -32,22 +33,32 @@ function show_help {
 
 # Function to start services in development mode
 function start_dev {
+  export MODE=development
   echo "Starting CloudSync services in development mode..."
-  docker-compose -f docker-compose.dev.yml up -d
-  echo "Services started! Access points:"
-  echo "- API: http://localhost:3000"
-  echo "- Dashboard: http://localhost:3001"
-  echo "- RabbitMQ Management: http://localhost:15672 (Username: cloudsync, Password: rabbitmq_password)"
+  if docker-compose -f docker-compose.dev.yml up -d; then
+    echo "Services started! Access points:"
+    echo "- API: http://localhost:3000"
+    echo "- Dashboard: http://localhost:3001"
+    echo "- RabbitMQ Management: http://localhost:15672 (Username: cloudsync, Password: rabbitmq_password)"
+  else
+    echo "Failed to start services. Check docker-compose logs for details." >&2
+    exit 1
+  fi
 }
 
 # Function to start services in production mode
 function start_prod {
+  export MODE=production
   echo "Starting CloudSync services in production mode..."
-  docker-compose -f docker-compose.prod.yml up -d
-  echo "Services started! Access points:"
-  echo "- API: http://localhost:3000"
-  echo "- Dashboard: http://localhost:3001"
-  echo "- RabbitMQ Management: http://localhost:15672 (Username: cloudsync, Password: rabbitmq_password)"
+  if docker-compose -f docker-compose.prod.yml up -d; then
+    echo "Services started! Access points:"
+    echo "- API: http://localhost:8000"
+    echo "- Dashboard: http://localhost:8001"
+    echo "- RabbitMQ Management: http://localhost:18672 (Username: cloudsync, Password: environment variable or default)"
+  else
+    echo "Failed to start services. Check docker-compose logs for details." >&2
+    exit 1
+  fi
 }
 
 # Function to stop all services
@@ -81,7 +92,12 @@ function show_logs {
 # Function to verify API service
 function verify_api {
   echo "Verifying API service..."
-  response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+  if [ "$MODE" == "production" ]; then
+    port=8000
+  else
+    port=3000
+  fi
+  response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${port}/health)
   
   if [ "$response" == "200" ]; then
     echo "✅ API service is running correctly"
@@ -155,24 +171,73 @@ function verify_rabbitmq {
   fi
   
   # Check if RabbitMQ management API is responding
-  response=$(curl -s -o /dev/null -w "%{http_code}" -u cloudsync:rabbitmq_password http://localhost:15672/api/overview)
+  if [ "$MODE" == "production" ]; then
+    port=18672
+  else
+    port=15672
+  fi
+  response=$(curl -s -o /dev/null -w "%{http_code}" -u cloudsync:rabbitmq_password http://localhost:${port}/api/overview)
   
   if [ "$response" == "200" ]; then
     echo "✅ RabbitMQ service is running correctly"
     
     # Show RabbitMQ info
     echo "RabbitMQ information:"
-    curl -s -u cloudsync:rabbitmq_password http://localhost:15672/api/overview | grep -o '"cluster_name":"[^"]*"'
+    curl -s -u cloudsync:rabbitmq_password http://localhost:${port}/api/overview | grep -o '"cluster_name":"[^"]*"'
   else
     echo "❌ RabbitMQ service is not responding correctly. Status code: $response"
+  fi
+}
+
+# Function to verify Dashboard service
+function verify_dashboard {
+  echo "Verifying Dashboard service..."
+  
+  # First check if the container is running
+  container=$(docker ps | grep cloudsync-dashboard | awk '{print $1}')
+  
+  if [ -z "$container" ]; then
+    echo "❌ Dashboard container is not running"
+    return
+  fi
+  
+  echo "Dashboard container is running: $container"
+  
+  # Check container logs for binding information
+  binding=$(docker logs $container 2>&1 | grep -o "Local:.*http://.*:[0-9]*" | tail -1)
+  echo "Dashboard binding: $binding"
+  
+  # Try to connect with timeout to prevent hanging
+  if [ "$MODE" == "production" ]; then
+    port=8001
+  else
+    port=3001
+  fi
+  response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:${port})
+  
+  if [ "$response" == "200" ]; then
+    echo "✅ Dashboard service is running correctly"
+  else
+    echo "❌ Dashboard service is not responding correctly. Status code: $response"
+    echo "Possible reasons:"
+    echo "  - The service might be binding only to localhost inside the container"
+    echo "  - There might be a port mapping issue in docker-compose.yml"
+    echo "  - The application might still be starting up"
+    
+    # Show additional diagnostic information
+    echo "Container port mapping:"
+    docker port $container
+    
+    echo "Try accessing the dashboard directly in your browser: http://localhost:${port}"
   fi
 }
 
 # Function to verify all services
 function verify_all {
   echo "Verifying all CloudSync services..."
-  echo "=================================="
   verify_api
+  echo "=================================="
+  verify_dashboard
   echo "=================================="
   verify_db
   echo "=================================="
@@ -267,6 +332,9 @@ case "$1" in
     ;;
   verify:rabbitmq)
     verify_rabbitmq
+    ;;
+  verify:dashboard)
+    verify_dashboard
     ;;
   db:migrate)
     run_migrations

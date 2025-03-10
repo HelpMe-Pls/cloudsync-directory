@@ -15,4 +15,4 @@ bunx prisma db seed
 
 # Skip cleaning dist directory as it's now a volume
 echo "🚀 Starting API in development mode..."
-NODE_OPTIONS="--max-old-space-size=2048" bun run start:dev
+bun run start:dev

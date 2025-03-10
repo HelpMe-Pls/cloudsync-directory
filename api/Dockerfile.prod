@@ -13,6 +13,9 @@ RUN bunx prisma generate
 
 # Build the application
 RUN bun run build
+RUN echo "Verifying build output..." && \
+    ls -la dist/ && \
+    [ -f dist/main.js ] || { echo "Error: Build failed to create main.js"; exit 1; }
 
 # Production stage
 FROM oven/bun:latest

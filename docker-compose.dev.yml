@@ -64,12 +64,14 @@ services:
       RABBITMQ_URL: amqp://cloudsync:rabbitmq_password@rabbitmq:5672
       NODE_ENV: development
       JWT_SECRET: dev_jwt_secret_key
+      WATCHPACK_POLLING: true
+      CHOKIDAR_USEPOLLING: true
     ports:
       - "3000:3000"
     volumes:
       - ./api:/app
-      - api_node_modules:/app/node_modules
-      - api_dist:/app/dist
+      - /app/node_modules
+      - /app/dist
     restart: unless-stopped
 
   dashboard:
@@ -89,6 +91,7 @@ services:
       FAST_REFRESH: "true"
       # Explicitly set development mode
       VITE_USER_NODE_ENV: "development"
+    command: bun dev --host 0.0.0.0
     ports:
       # Map container port 5173 to host port 3001
       - "3001:5173"
