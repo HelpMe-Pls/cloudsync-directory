@@ -1,18 +1,13 @@
 #!/bin/sh
 
-echo "🔄 Waiting for database to be ready..."
-# Wait for PostgreSQL to be ready
-while ! nc -z postgres 5432; do
-  sleep 0.5
-done
-echo "✅ Database is ready!"
+set -e
 
-echo "🔄 Running database migrations..."
-bunx prisma migrate dev --name init --preview-feature
+# Start the NestJS application with hot reloading
+echo " Starting API server with hot reloading..."
+# Set environment variables for better file watching in Docker
+export CHOKIDAR_USEPOLLING=true
+export WATCHPACK_POLLING=true
+export FORCE_COLOR=1
 
-echo "🔄 Seeding database..."
-bunx prisma db seed
-
-# Skip cleaning dist directory as it's now a volume
-echo "🚀 Starting API in development mode..."
-bun run start:dev
+# Use exec to ensure signals are properly passed to the Node process
+exec bun start:dev

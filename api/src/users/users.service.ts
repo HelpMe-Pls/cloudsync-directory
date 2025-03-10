@@ -33,7 +33,7 @@ async function hashPassword(password: string): Promise<string> {
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createUserDto: CreateUserDto) {
     // Check if user already exists

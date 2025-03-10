@@ -1,22 +1,28 @@
-FROM oven/bun:latest
+FROM oven/bun:1.0.25
 
 WORKDIR /app
 
+# Copy package files first for better caching
 COPY package.json bun.lock ./
-
 RUN bun install
 
-COPY . .
+# Copy Prisma schema first for better caching
+COPY prisma ./prisma/
 
-# Generate Prisma client
+# Generate Prisma client during build to ensure it's available
 RUN bunx prisma generate
 
-# Install netcat for the startup script
-RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+# Copy the rest of the application
+COPY . .
 
-# Make startup script executable
-RUN chmod +x start-dev.sh
+# Install netcat and curl for health checks and clean up apt cache
+RUN chmod +x start-dev.sh && \
+    apt-get update && \
+    apt-get install -y netcat-openbsd curl && \
+    rm -rf /var/lib/apt/lists/*
 
+# Expose the API port
 EXPOSE 3000
 
+# Start the application
 CMD ["./start-dev.sh"]

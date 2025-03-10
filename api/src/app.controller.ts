@@ -8,6 +8,7 @@ interface HealthResponse {
     api: boolean;
     database: boolean;
   };
+  details?: Record<string, any>;
 }
 
 @Controller()
@@ -20,14 +21,16 @@ export class AppController {
   }
 
   @Get('health')
-  getHealth(): HealthResponse {
+  async getHealth(): Promise<HealthResponse> {
+    const healthInfo = await this.appService.getHealth();
     return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
+      status: healthInfo.dbConnection ? 'ok' : 'degraded',
+      timestamp: healthInfo.timestamp,
       services: {
         api: true,
-        database: true,
+        database: healthInfo.dbConnection,
       },
+      details: healthInfo.details,
     };
   }
 }

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:14
+    image: postgres:latest
     container_name: cloudsync-postgres
     environment:
       POSTGRES_USER: cloudsync
@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7
+    image: redis:latest
     container_name: cloudsync-redis
     command: redis-server --appendonly yes
     ports:
@@ -33,7 +33,7 @@ services:
     restart: unless-stopped
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:latest
     container_name: cloudsync-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: cloudsync

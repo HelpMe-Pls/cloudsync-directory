@@ -1,10 +1,10 @@
 services:
   postgres:
-    image: postgres:14
+    image: postgres:latest
     container_name: cloudsync-postgres
     environment:
       POSTGRES_USER: cloudsync
-      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
       POSTGRES_DB: cloudsync
     ports:
       - "5432:5432"
@@ -17,7 +17,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7
+    image: redis:latest
     container_name: cloudsync-redis
     ports:
       - "6379:6379"
@@ -30,7 +30,7 @@ services:
       retries: 5
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:management
     container_name: cloudsync-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: cloudsync
@@ -59,20 +59,30 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://cloudsync:postgres_password@postgres:5432/cloudsync
+      DATABASE_URL: postgresql://cloudsync:${POSTGRES_PASSWORD:-postgres_password}@postgres:5432/cloudsync
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://cloudsync:rabbitmq_password@rabbitmq:5672
       NODE_ENV: development
       JWT_SECRET: dev_jwt_secret_key
-      WATCHPACK_POLLING: true
-      CHOKIDAR_USEPOLLING: true
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "500"
+      FORCE_COLOR: "1"
     ports:
       - "3000:3000"
     volumes:
-      - ./api:/app
+      - ./api:/app:cached
       - /app/node_modules
+      - /app/node_modules/.prisma
+      - /app/node_modules/@prisma/client
       - /app/dist
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   dashboard:
     build:
@@ -85,23 +95,16 @@ services:
       API_URL: http://api:3000
       NODE_ENV: development
       HOST: "0.0.0.0"
-      # Enable file watching for development
       CHOKIDAR_USEPOLLING: "true"
-      # Force refresh on file changes
       FAST_REFRESH: "true"
-      # Explicitly set development mode
       VITE_USER_NODE_ENV: "development"
     command: bun dev --host 0.0.0.0
     ports:
-      # Map container port 5173 to host port 3001
       - "3001:5173"
     volumes:
-      # Mount the dashboard directory with consistent naming
       - ./dashboard:/app:consistent
-      # Use named volumes for node_modules and build to improve performance
       - dashboard_node_modules:/app/node_modules
       - dashboard_build:/app/build
-    # Ensure container restarts if it crashes
     restart: unless-stopped
 
 volumes:

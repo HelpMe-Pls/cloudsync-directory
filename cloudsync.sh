@@ -33,17 +33,51 @@ function show_help {
 
 # Function to start services in development mode
 function start_dev {
-  export MODE=development
   echo "Starting CloudSync services in development mode..."
-  if docker-compose -f docker-compose.dev.yml up -d; then
-    echo "Services started! Access points:"
-    echo "- API: http://localhost:3000"
-    echo "- Dashboard: http://localhost:3001"
-    echo "- RabbitMQ Management: http://localhost:15672 (Username: cloudsync, Password: rabbitmq_password)"
+  
+  # Build the API service with latest changes
+  echo "Building API service with latest changes..."
+  docker compose -f docker-compose.dev.yml build api
+  
+  # Start all services
+  docker compose -f docker-compose.dev.yml up -d
+  
+  # Wait for services to be healthy
+  echo "Waiting for services to initialize..."
+  sleep 5
+  
+  # Verify API service is running
+  echo "Verifying API service..."
+  API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health || echo "000")
+  
+  # If API is not responding, check logs
+  if [ "$API_STATUS" != "200" ]; then
+    echo "❌ API service is not responding correctly. Status code: $API_STATUS"
+    echo "Checking API logs for errors..."
+    docker logs cloudsync-api
+    
+    # Attempt to fix common Prisma issues
+    echo "Attempting to fix Prisma client issues..."
+    docker exec cloudsync-api sh -c "cd /app && bunx prisma generate"
+    
+    # Wait a bit and check again
+    sleep 5
+    API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health || echo "000")
+    
+    if [ "$API_STATUS" == "200" ]; then
+      echo "✅ API service is now running correctly!"
+    else
+      echo "❌ API service is still not responding correctly. You may need to check the logs for more details."
+    fi
   else
-    echo "Failed to start services. Check docker-compose logs for details." >&2
-    exit 1
+    echo "✅ API service is running correctly!"
   fi
+  
+  # Display access information
+  echo "Services started! Access points:"
+  echo "- API: http://localhost:3000"
+  echo "- Dashboard: http://localhost:3001"
+  echo "- RabbitMQ Management: http://localhost:15672 (Username: cloudsync, Password: rabbitmq_password)"
 }
 
 # Function to start services in production mode
@@ -92,17 +126,27 @@ function show_logs {
 # Function to verify API service
 function verify_api {
   echo "Verifying API service..."
-  if [ "$MODE" == "production" ]; then
-    port=8000
-  else
-    port=3000
-  fi
-  response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${port}/health)
   
-  if [ "$response" == "200" ]; then
-    echo "✅ API service is running correctly"
+  # Check if container is running
+  if docker ps | grep -q cloudsync-api; then
+    # Check if API is responding
+    response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+    
+    if [ "$response" == "200" ]; then
+      echo "✅ API service is running correctly"
+      
+      # Show API health info
+      echo "API health information:"
+      curl -s http://localhost:3000/health | grep -v "}"
+    else
+      echo "❌ API service is not responding correctly. Status code: $response"
+      
+      # Show API logs to help diagnose the issue
+      echo "Recent API logs:"
+      docker logs --tail 20 cloudsync-api
+    fi
   else
-    echo "❌ API service is not responding correctly. Status code: $response"
+    echo "❌ API container is not running"
   fi
 }
 
@@ -110,25 +154,27 @@ function verify_api {
 function verify_db {
   echo "Verifying PostgreSQL database..."
   
-  # Get the container name
-  container=$(docker ps | grep postgres | awk '{print $1}')
-  
-  if [ -z "$container" ]; then
-    echo "❌ PostgreSQL container is not running"
-    return
-  fi
-  
-  # Check if PostgreSQL is responding
-  result=$(docker exec $container pg_isready -U cloudsync)
-  
-  if [[ $result == *"accepting connections"* ]]; then
-    echo "✅ PostgreSQL database is running correctly"
-    
-    # Show database info
-    echo "Database information:"
-    docker exec $container psql -U cloudsync -c "SELECT count(*) as user_count FROM \"User\";" cloudsync
+  # Check if container is running
+  if docker ps | grep -q cloudsync-postgres; then
+    # Check if PostgreSQL is accepting connections
+    if docker exec cloudsync-postgres pg_isready -h localhost; then
+      echo "✅ PostgreSQL database is running correctly"
+      
+      # Ensure database schema is properly set up
+      echo "Ensuring database schema is properly set up..."
+      
+      # Run migrations to ensure tables are created
+      echo "Running Prisma migrations..."
+      docker exec cloudsync-api bunx prisma migrate deploy
+      
+      # Check if User table exists and has records
+      echo "Database information:"
+      docker exec cloudsync-postgres psql -U cloudsync -d cloudsync -c "SELECT count(*) as user_count FROM \"User\";"
+    else
+      echo "❌ PostgreSQL database is not responding correctly"
+    fi
   else
-    echo "❌ PostgreSQL database is not responding correctly"
+    echo "❌ PostgreSQL container is not running"
   fi
 }
 
@@ -162,30 +208,24 @@ function verify_redis {
 function verify_rabbitmq {
   echo "Verifying RabbitMQ service..."
   
-  # Get the container name
-  container=$(docker ps | grep rabbitmq | awk '{print $1}')
-  
-  if [ -z "$container" ]; then
+  # Check if container is running
+  if docker ps | grep -q cloudsync-rabbitmq; then
+    # Check if RabbitMQ is responding
+    if docker exec cloudsync-rabbitmq rabbitmq-diagnostics -q ping; then
+      echo "✅ RabbitMQ service is running correctly"
+      
+      # Ensure management plugin is enabled
+      echo "Ensuring RabbitMQ management plugin is enabled..."
+      docker exec cloudsync-rabbitmq rabbitmq-plugins enable rabbitmq_management
+      
+      # Show RabbitMQ info
+      echo "RabbitMQ information:"
+      docker exec cloudsync-rabbitmq rabbitmqctl status | grep -m1 "cluster_name"
+    else
+      echo "❌ RabbitMQ service is not responding correctly"
+    fi
+  else
     echo "❌ RabbitMQ container is not running"
-    return
-  fi
-  
-  # Check if RabbitMQ management API is responding
-  if [ "$MODE" == "production" ]; then
-    port=18672
-  else
-    port=15672
-  fi
-  response=$(curl -s -o /dev/null -w "%{http_code}" -u cloudsync:rabbitmq_password http://localhost:${port}/api/overview)
-  
-  if [ "$response" == "200" ]; then
-    echo "✅ RabbitMQ service is running correctly"
-    
-    # Show RabbitMQ info
-    echo "RabbitMQ information:"
-    curl -s -u cloudsync:rabbitmq_password http://localhost:${port}/api/overview | grep -o '"cluster_name":"[^"]*"'
-  else
-    echo "❌ RabbitMQ service is not responding correctly. Status code: $response"
   fi
 }
 
