@@ -301,6 +301,8 @@ function run_migrations {
   fi
   
   cd api
+  docker exec cloudsync-api bunx prisma db push --accept-data-loss
+  docker exec cloudsync-api bunx prisma generate
   bunx prisma migrate dev
   cd ..
   echo "Migrations completed successfully."

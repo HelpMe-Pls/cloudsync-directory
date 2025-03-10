@@ -8,7 +8,7 @@ export class AppService {
   constructor(private readonly prisma: PrismaService) {}
 
   getHello(): string {
-    return 'CloudSync Directory API is running!';
+    return 'CloudSync Directory API is running!!!';
   }
 
   async getHealth(): Promise<{
